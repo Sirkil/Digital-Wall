@@ -62,7 +62,7 @@
         /* The actual text inside the box */
         .name-text {
             white-space: nowrap;
-            font-size: 56px;
+            font-size: 3vw; /* Scales automatically based on screen width */
             transform-origin: center center;
         }
 
@@ -122,11 +122,12 @@
             const halfWidth = window.innerWidth / 2;
             const halfHeight = window.innerHeight / 2;
 
-            const minX = 260; // Inner edge (near QR/Text)
-            const maxX = halfWidth - 100; // Outer edge (with margin)
+            // Use percentages of screen dimensions to mimic 16:9 spacing perfectly
+            const minX = window.innerWidth * 0.135; 
+            const maxX = halfWidth - (window.innerWidth * 0.052); 
             
-            const minY = -halfHeight + 60; // Top of screen
-            const maxY = halfHeight - 60;  // Bottom of screen
+            const minY = -halfHeight + (window.innerHeight * 0.055); 
+            const maxY = halfHeight - (window.innerHeight * 0.055); 
 
             const stepX = (maxX - minX) / (cols - 1);
             const stepY = (maxY - minY) / (rows - 1);
@@ -240,7 +241,7 @@
 
             // Scale text down if it's too long
             const textWidth = textEl.offsetWidth;
-            const maxAllowedWidth = destination.w * 1.25; 
+            const maxAllowedWidth = destination.w * 1.5; // Increased from 1.25 to prevent aggressive shrinking
             
             if (textWidth > maxAllowedWidth) {
                 const scaleDownRatio = maxAllowedWidth / textWidth;
