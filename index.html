@@ -22,18 +22,6 @@
             z-index: -1; /* Keeps the video behind everything else */
         }
 
-        /* Centered Bottom QR Code */
-        .qr-code {
-            position: absolute;
-            bottom: 80px; /* Distance from the bottom */
-            left: 50%;
-            transform: translateX(-50%);
-            width: 250px; /* Adjust size as needed */
-            height: auto;
-            z-index: 200; /* Ensures it stays on top of the names */
-            border-radius: 10px; /* Optional: rounds the corners slightly */
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5); /* Optional: helps it stand out */
-        }
 
         .name-wrapper {
             position: absolute;
@@ -74,7 +62,7 @@
         /* The actual text inside the box */
         .name-text {
             white-space: nowrap;
-            font-size: 32px;
+            font-size: 56px;
             transform-origin: center center;
         }
 
@@ -107,8 +95,6 @@
     </video>
 
     <div id="nameWrapper" class="name-wrapper"></div>
-
-    <img src="assets/formQrcode.png" alt="QR Code" class="qr-code">
 
     <script>
         const scriptUrl = 'https://script.google.com/macros/s/AKfycbxB5RPNS-JYkdSAqt-fEFrOzfE0LUvEBkS6octQoRbVctPRV2nq8Xpy2gziNNp1WH74/exec';
