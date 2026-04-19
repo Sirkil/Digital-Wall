@@ -96,9 +96,15 @@
 
     <div id="nameWrapper" class="name-wrapper"></div>
 
-    <script>
-        const scriptUrl = 'https://script.google.com/macros/s/AKfycbxB5RPNS-JYkdSAqt-fEFrOzfE0LUvEBkS6octQoRbVctPRV2nq8Xpy2gziNNp1WH74/exec';
-        let lastProcessedName = "";
+<script>
+        // --- JOTFORM CONFIGURATION ---
+        const formID = '260243644298057';
+        const apiKey = 'f2b4c8d84f3d90067e99bd5bde065cbb'; // <-- Paste your API key here
+        
+        // We limit=1 to only grab the most recent submission, saving bandwidth
+        const jotformUrl = `https://api.jotform.com/form/${formID}/submissions?apiKey=${apiKey}&limit=1&orderby=created_at`;
+        
+        let lastSubmissionId = ""; // Track by ID instead of name, so if two "Johns" submit, it still works
         
         const maxNames = 100; 
         const nameWrapper = document.getElementById('nameWrapper'); 
@@ -116,13 +122,12 @@
         // 2. GENERATE PERFECT GRID & SKIP TOP 5 INNER
         // ==========================================
         function createGrid() {
-            const rows = 11; // 11 rows to stretch across the screen
-            const cols = 5;  // 5 uniform columns
+            const rows = 11; 
+            const cols = 5;  
             
             const halfWidth = window.innerWidth / 2;
             const halfHeight = window.innerHeight / 2;
 
-            // Use percentages of screen dimensions to mimic 16:9 spacing perfectly
             const minX = window.innerWidth * 0.135; 
             const maxX = halfWidth - (window.innerWidth * 0.052); 
             
@@ -137,21 +142,17 @@
 
             let slotIndex = 0;
 
-            // side 0 is Right, side 1 is Left
             for (let side = 0; side < 2; side++) {
                 const isRightSide = (side === 0);
                 
                 for (let col = 0; col < cols; col++) {
                     for (let row = 0; row < rows; row++) {
                         
-                        // --- THE MAGIC LOGIC ---
-                        // If it is the innermost column (col 0) AND one of the top 5 rows (row 0 to 4)...
-                        // We skip it so it doesn't cover "UNITED FOR IMPACT"
                         if (col === 0 && row < 5) {
                             continue; 
                         }
 
-                        if (slotIndex >= maxNames) break; // Safety check
+                        if (slotIndex >= maxNames) break; 
 
                         let finalX = minX + (col * stepX);
                         let finalY = minY + (row * stepY);
@@ -161,13 +162,10 @@
                         let angleRad = Math.atan2(finalY, finalX);
                         let angleDeg = angleRad * (180 / Math.PI);
 
-                        // Keep text upright
                         if (angleDeg > 90 || angleDeg < -90) { angleDeg += 180; }
 
-                        // Save dimensions 
                         slotData[slotIndex] = { x: finalX, y: finalY, angle: angleDeg, w: uniformBoxWidth, h: uniformBoxHeight };
 
-                        // Draw the visual red box
                         const boxEl = document.createElement('div');
                         boxEl.className = 'grid-slot';
                         boxEl.style.width = uniformBoxWidth + "px";
@@ -177,7 +175,7 @@
                         boxEl.style.transform = `translate(-50%, -50%) rotate(${angleDeg}deg)`;
                         nameWrapper.appendChild(boxEl);
                         
-                        slotIndex++; // Move to the next spot
+                        slotIndex++; 
                     }
                 }
             }
@@ -186,29 +184,65 @@
         createGrid();
 
         // ==========================================
-        // 3. FETCH AND RESIZE NAMES TO FIT (WITH REPLACEMENT LOGIC)
+        // 3. FETCH FROM JOTFORM API
         // ==========================================
         async function checkForNewName() {
             try {
-                const response = await fetch(scriptUrl);
-                const currentName = await response.text();
+                const response = await fetch(jotformUrl);
+                const data = await response.json();
 
-                if (currentName !== lastProcessedName && currentName.trim() !== "") {
-                    lastProcessedName = currentName;
-                    createNewNameElement(currentName);
+                // Ensure the API call was successful and we have submissions
+                if (data.responseCode === 200 && data.content.length > 0) {
+                    const latestSubmission = data.content[0]; 
+
+                    // Check if this is a brand new submission
+                    if (latestSubmission.id !== lastSubmissionId) {
+                        
+                        // If it's the very first time the page loads, just set the ID and don't animate old names
+                        if (lastSubmissionId === "") {
+                            lastSubmissionId = latestSubmission.id;
+                            return; 
+                        }
+
+                        lastSubmissionId = latestSubmission.id;
+                        const currentName = extractNameFromAnswers(latestSubmission.answers);
+                        
+                        if (currentName && currentName.trim() !== "") {
+                            createNewNameElement(currentName);
+                        }
+                    }
                 }
             } catch (error) {
-                console.error("Connection Error:", error);
+                console.error("Jotform Connection Error:", error);
             }
         }
 
+        // Helper function to dig into Jotform's complex JSON structure to find the name
+        function extractNameFromAnswers(answers) {
+            for (const key in answers) {
+                const field = answers[key];
+                
+                // If you are using the specific "Full Name" block in Jotform
+                if (field.type === "control_fullname" && field.answer) {
+                    return `${field.answer.first || ''} ${field.answer.last || ''}`.trim();
+                } 
+                // If you are using a standard "Short Text" block labeled "Name"
+                else if (field.type === "control_textbox" && field.text.toLowerCase().includes("name") && field.answer) {
+                    return field.answer.trim();
+                }
+            }
+            return ""; 
+        }
+
+        // ==========================================
+        // 4. ANIMATE & PLACE NAME
+        // ==========================================
         function createNewNameElement(name) {
             let usedSlotIndex;
 
             if (availableSlots.length > 0) {
                 usedSlotIndex = availableSlots.pop();
             } else {
-                // If 100 spots are full, remove the oldest name
                 const oldestItem = activeElements.shift(); 
                 usedSlotIndex = oldestItem.slotIndex;      
 
@@ -239,9 +273,8 @@
             
             void nameEl.offsetWidth; 
 
-            // Scale text down if it's too long
             const textWidth = textEl.offsetWidth;
-            const maxAllowedWidth = destination.w * 1.5; // Increased from 1.25 to prevent aggressive shrinking
+            const maxAllowedWidth = destination.w * 1.5; 
             
             if (textWidth > maxAllowedWidth) {
                 const scaleDownRatio = maxAllowedWidth / textWidth;
@@ -260,7 +293,8 @@
             }, 1500); 
         }
 
-        setInterval(checkForNewName, 1000);
+        // Check for new names every 2.5 seconds (Jotform limits API calls to 1000/day on free tier or 10,000 on paid)
+        setInterval(checkForNewName, 2500);
     </script>
 </body>
 </html>
